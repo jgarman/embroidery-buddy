@@ -63,3 +63,8 @@ Then open your browser to `http://localhost:8080/` and you'll see the upload int
 - Each upload is wrapped in a transaction, ensuring the USB gadget is disconnected during the write operation
 - Maximum upload size is 100MB (configurable in handler.go)
 - Filenames are sanitized to prevent path traversal attacks
+- HTML templates are embedded in the Go binary using `//go:embed` for easy deployment
+
+## Development
+
+The HTML template is located in [templates/index.html](templates/index.html) for easy editing during development. The template is automatically embedded into the binary at build time using Go's embed feature, so no external files are needed for deployment.

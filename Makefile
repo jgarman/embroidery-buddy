@@ -4,10 +4,11 @@ GO_FLAGS=-ldflags="-s -w"
 GOARCH_RPI=arm
 GOARM_RPI=6
 GOOS_RPI=linux
+BINARY_NAME=embroidery-usbd
 
 .PHONY: all build build-rpi clean test run
 
-all: clean test build
+all: clean test build build-rpi
 
 build:
 	go build ${GO_FLAGS} -o ${BUILD_DIR}/${BINARY_NAME} cmd/embroidery-usbd/main.go

@@ -25,6 +25,8 @@ func main() {
 	if diskPath == "" {
 		diskPath = "/tmp/embroidery.img"
 		log.Printf("DISK_PATH not set, using default: %s", diskPath)
+		// create new disk since we're testing
+		diskmanager.CreateDiskImage(diskPath, 100)
 	}
 
 	// Create disk manager configuration
