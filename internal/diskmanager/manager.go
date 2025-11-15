@@ -25,17 +25,17 @@ var (
 )
 
 type Config struct {
-	diskPath string
+	DiskPath string
 
 	// USB gadget information
-	gadgetShortName string
-	gadgetVendorId  int
-	gadgetProductId int
-	gadgetBcdDevice int
-	gadgetBcdUsb    int
+	GadgetShortName string
+	GadgetVendorId  int
+	GadgetProductId int
+	GadgetBcdDevice int
+	GadgetBcdUsb    int
 
-	gadgetProductName  string
-	gadgetManufacturer string
+	GadgetProductName  string
+	GadgetManufacturer string
 }
 
 type Manager struct {
@@ -60,7 +60,7 @@ type Manager struct {
 
 func (m *Manager) openDisk() error {
 	// Open disk in read-write mode
-	disk, err := diskfs.Open(m.config.diskPath, diskfs.WithOpenMode(diskfs.ReadWriteExclusive))
+	disk, err := diskfs.Open(m.config.DiskPath, diskfs.WithOpenMode(diskfs.ReadWriteExclusive))
 	if err != nil {
 		return fmt.Errorf("failed to open disk: %w", err)
 	}
@@ -98,9 +98,9 @@ func New(config Config, gadget UsbGadget) (*Manager, error) {
 	}
 
 	// Check if disk image exists
-	_, err := os.Stat(m.config.diskPath)
+	_, err := os.Stat(m.config.DiskPath)
 	if err != nil {
-		return nil, fmt.Errorf("disk image %s doesn't exist: %w", m.config.diskPath, err)
+		return nil, fmt.Errorf("disk image %s doesn't exist: %w", m.config.DiskPath, err)
 	}
 	if err := m.openDisk(); err != nil {
 		return nil, err

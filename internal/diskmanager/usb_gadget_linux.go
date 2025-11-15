@@ -33,15 +33,15 @@ func writeSysfs(path, value string) error {
 // Initialize sets up and activates the USB gadget
 func (g *LinuxUsbGadget) Initialize() error {
 	desiredPermissions := os.FileMode(0775)
-	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.gadgetShortName)
+	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.GadgetShortName)
 
 	// Check if USB gadget directory already exists
 	_, err := os.Stat(gadgetBase)
 	if err == nil {
-		return fmt.Errorf("gadget %s already configured", g.config.gadgetShortName)
+		return fmt.Errorf("gadget %s already configured", g.config.GadgetShortName)
 	}
 	if !os.IsNotExist(err) {
-		return fmt.Errorf("other error for gadget %s: %w", g.config.gadgetShortName, err)
+		return fmt.Errorf("other error for gadget %s: %w", g.config.GadgetShortName, err)
 	}
 
 	// Create USB gadget directory
@@ -50,16 +50,16 @@ func (g *LinuxUsbGadget) Initialize() error {
 	}
 
 	// Configure gadget - write vendor/product IDs and USB versions
-	if err := writeSysfs(filepath.Join(gadgetBase, "idVendor"), fmt.Sprintf("0x%04x", g.config.gadgetVendorId)); err != nil {
+	if err := writeSysfs(filepath.Join(gadgetBase, "idVendor"), fmt.Sprintf("0x%04x", g.config.GadgetVendorId)); err != nil {
 		return err
 	}
-	if err := writeSysfs(filepath.Join(gadgetBase, "idProduct"), fmt.Sprintf("0x%04x", g.config.gadgetProductId)); err != nil {
+	if err := writeSysfs(filepath.Join(gadgetBase, "idProduct"), fmt.Sprintf("0x%04x", g.config.GadgetProductId)); err != nil {
 		return err
 	}
-	if err := writeSysfs(filepath.Join(gadgetBase, "bcdDevice"), fmt.Sprintf("0x%04x", g.config.gadgetBcdDevice)); err != nil {
+	if err := writeSysfs(filepath.Join(gadgetBase, "bcdDevice"), fmt.Sprintf("0x%04x", g.config.GadgetBcdDevice)); err != nil {
 		return err
 	}
-	if err := writeSysfs(filepath.Join(gadgetBase, "bcdUSB"), fmt.Sprintf("0x%04x", g.config.gadgetBcdUsb)); err != nil {
+	if err := writeSysfs(filepath.Join(gadgetBase, "bcdUSB"), fmt.Sprintf("0x%04x", g.config.GadgetBcdUsb)); err != nil {
 		return err
 	}
 
@@ -73,10 +73,10 @@ func (g *LinuxUsbGadget) Initialize() error {
 	if err := writeSysfs(filepath.Join(stringsDir, "serialnumber"), "b827ebcc658d"); err != nil {
 		return err
 	}
-	if err := writeSysfs(filepath.Join(stringsDir, "manufacturer"), g.config.gadgetManufacturer); err != nil {
+	if err := writeSysfs(filepath.Join(stringsDir, "manufacturer"), g.config.GadgetManufacturer); err != nil {
 		return err
 	}
-	if err := writeSysfs(filepath.Join(stringsDir, "product"), g.config.gadgetProductName); err != nil {
+	if err := writeSysfs(filepath.Join(stringsDir, "product"), g.config.GadgetProductName); err != nil {
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (g *LinuxUsbGadget) Initialize() error {
 	if err := writeSysfs(filepath.Join(massStorageDir, "lun.0/nofua"), "0"); err != nil {
 		return err
 	}
-	if err := writeSysfs(filepath.Join(massStorageDir, "lun.0/file"), g.config.diskPath); err != nil {
+	if err := writeSysfs(filepath.Join(massStorageDir, "lun.0/file"), g.config.DiskPath); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (g *LinuxUsbGadget) Disconnect() error {
 		return nil // Already disconnected
 	}
 
-	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.gadgetShortName)
+	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.GadgetShortName)
 	udcPath := filepath.Join(gadgetBase, "UDC")
 
 	// Disconnect by writing empty string to UDC
@@ -173,7 +173,7 @@ func (g *LinuxUsbGadget) Reconnect() error {
 		return fmt.Errorf("no UDC name available, gadget may not have been initialized")
 	}
 
-	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.gadgetShortName)
+	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.GadgetShortName)
 	udcPath := filepath.Join(gadgetBase, "UDC")
 
 	// Reconnect by writing UDC name back
@@ -192,7 +192,7 @@ func (g *LinuxUsbGadget) IsConnected() bool {
 
 // destroy deactivates and removes the USB gadget (private method)
 func (g *LinuxUsbGadget) destroy() {
-	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.gadgetShortName)
+	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.GadgetShortName)
 
 	// Check if gadget exists
 	if _, err := os.Stat(gadgetBase); os.IsNotExist(err) {

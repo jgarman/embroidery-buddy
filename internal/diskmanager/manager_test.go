@@ -47,14 +47,14 @@ func TestNewManager(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget (no USB gadget setup)
@@ -92,14 +92,14 @@ func TestWriteFile(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -151,14 +151,14 @@ func TestWriteFileWithSubdirectory(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -211,14 +211,14 @@ func TestWriteMultipleFiles(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -337,14 +337,14 @@ func TestReadFile(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -395,14 +395,14 @@ func TestReadNonExistentFile(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -444,14 +444,14 @@ func TestReadWriteRoundTrip(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -525,14 +525,14 @@ func TestUsbGadgetDisconnectReconnect(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -634,14 +634,14 @@ func TestManagerCloseDisconnects(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget
@@ -680,14 +680,14 @@ func TestManagerCloseTwice(t *testing.T) {
 
 	// Create config
 	config := Config{
-		diskPath:           diskPath,
-		gadgetShortName:    "test",
-		gadgetVendorId:     0x1d6b,
-		gadgetProductId:    0x0104,
-		gadgetBcdDevice:    0x0100,
-		gadgetBcdUsb:       0x0200,
-		gadgetProductName:  "Test Product",
-		gadgetManufacturer: "Test Manufacturer",
+		DiskPath:           diskPath,
+		GadgetShortName:    "test",
+		GadgetVendorId:     0x1d6b,
+		GadgetProductId:    0x0104,
+		GadgetBcdDevice:    0x0100,
+		GadgetBcdUsb:       0x0200,
+		GadgetProductName:  "Test Product",
+		GadgetManufacturer: "Test Manufacturer",
 	}
 
 	// Create manager with NoOp gadget

@@ -1,32 +1,60 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
-
-	"context"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/jgarman/embroidery-buddy/internal/diskmanager"
+	"github.com/jgarman/embroidery-buddy/internal/webui"
+	"github.com/rs/cors"
 )
-
-func HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := json.NewEncoder(w).Encode("Hello World!"); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
-}
 
 func main() {
 	serverHost := "0.0.0.0"
 	serverPort := 8080
+
+	// TODO: Make these configurable via flags or environment variables
+	diskPath := os.Getenv("DISK_PATH")
+	if diskPath == "" {
+		diskPath = "/tmp/embroidery.img"
+		log.Printf("DISK_PATH not set, using default: %s", diskPath)
+	}
+
+	// Create disk manager configuration
+	config := diskmanager.Config{
+		DiskPath:           diskPath,
+		GadgetShortName:    "embroidery",
+		GadgetVendorId:     0x1d6b, // Linux Foundation
+		GadgetProductId:    0x0104, // Multifunction Composite Gadget
+		GadgetBcdDevice:    0x0100, // Device version 1.0
+		GadgetBcdUsb:       0x0200, // USB 2.0
+		GadgetProductName:  "Embroidery USB Storage",
+		GadgetManufacturer: "Embroidery Buddy",
+	}
+
+	// Initialize disk manager with NoOp gadget for development
+	// In production, this would use LinuxUsbGadget
+	gadget := diskmanager.NewNoOpUsbGadget()
+	dm, err := diskmanager.New(config, gadget)
+	if err != nil {
+		log.Fatalf("Failed to initialize disk manager: %v", err)
+	}
+	defer dm.Close()
+
+	log.Printf("Disk manager initialized with disk: %s", diskPath)
+
+	// Create web UI handler
+	webHandler, err := webui.New(dm)
+	if err != nil {
+		log.Fatalf("Failed to initialize web UI: %v", err)
+	}
 
 	// Setup CORS
 	c := cors.New(cors.Options{
@@ -36,8 +64,12 @@ func main() {
 		AllowCredentials: true,
 	})
 
+	// Setup routes
 	r := mux.NewRouter()
-	r.HandleFunc("/", HelloWorldHandler).Methods("GET")
+	r.HandleFunc("/", webHandler.IndexHandler).Methods("GET")
+	r.HandleFunc("/api/upload", webHandler.UploadHandler).Methods("POST")
+	r.HandleFunc("/api/health", webHandler.HealthHandler).Methods("GET")
+
 	handler := c.Handler(r)
 
 	// Create HTTP server
