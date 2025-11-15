@@ -196,7 +196,8 @@ func TestWriteFileWithSubdirectory(t *testing.T) {
 	}
 }
 
-// TestWriteMultipleFiles tests writing multiple files
+// TestWriteMultipleFiles tests writing multiple files and verifies that
+// a single transaction only calls Disconnect/Reconnect once
 func TestWriteMultipleFiles(t *testing.T) {
 	// Create temporary directory for test
 	tempDir := t.TempDir()
@@ -227,6 +228,9 @@ func TestWriteMultipleFiles(t *testing.T) {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
 
+	// Reset counts after initialization (Initialize calls Reconnect once)
+	gadget.ResetCounts()
+
 	// Write multiple files in a single transaction
 	files := map[string]string{
 		"/file1.txt":       "Content of file 1",
@@ -248,6 +252,15 @@ func TestWriteMultipleFiles(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Failed to write files in transaction: %v", err)
+	}
+
+	// Verify that Disconnect and Reconnect were each called exactly once
+	// despite writing 5 files
+	if gadget.GetDisconnectCalls() != 1 {
+		t.Errorf("Expected Disconnect to be called 1 time for %d files, got %d", len(files), gadget.GetDisconnectCalls())
+	}
+	if gadget.GetReconnectCalls() != 1 {
+		t.Errorf("Expected Reconnect to be called 1 time for %d files, got %d", len(files), gadget.GetReconnectCalls())
 	}
 
 	// Verify all files by reading them back
