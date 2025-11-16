@@ -1,6 +1,7 @@
 package diskmanager
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -66,11 +67,20 @@ func (w *LoopbackFilesystemWriter) WriteFile(filePath string, reader io.Reader, 
 	}
 	defer file.Close()
 
+	// Use a large buffered writer (1MB) for better performance
+	bufferedWriter := bufio.NewWriterSize(file, 1024*1024)
+	defer bufferedWriter.Flush()
+
 	// Copy data - use io.Copy instead of io.CopyN to handle all data
 	// The size parameter is provided for information but we'll copy everything
-	_, err = io.Copy(file, reader)
+	_, err = io.Copy(bufferedWriter, reader)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	// Ensure all data is flushed to disk
+	if err := bufferedWriter.Flush(); err != nil {
+		return fmt.Errorf("failed to flush file: %w", err)
 	}
 
 	return nil
