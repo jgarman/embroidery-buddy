@@ -44,8 +44,8 @@ func (h *Handler) IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 // UploadHandler handles file uploads using streaming multipart reader
 func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
-	// Limit upload size to 100MB
-	r.Body = http.MaxBytesReader(w, r.Body, 100*1024*1024)
+	// Limit upload size to 200MB
+	r.Body = http.MaxBytesReader(w, r.Body, 200*1024*1024)
 
 	// Get the multipart reader for streaming
 	reader, err := r.MultipartReader()
@@ -54,6 +54,8 @@ func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid multipart request", http.StatusBadRequest)
 		return
 	}
+
+	log.Printf("In multipart reader")
 
 	// Process each part in the multipart form
 	var filename string
@@ -146,4 +148,28 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, `{"status": "ok"}`)
+}
+
+// ClearFilesHandler clears all files from the disk by recreating the filesystem
+func (h *Handler) ClearFilesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	log.Printf("Clearing all files from disk")
+
+	// Clear all files by recreating the filesystem
+	if err := h.diskManager.ClearFiles(); err != nil {
+		log.Printf("Failed to clear files: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to clear files: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Successfully cleared all files from disk")
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, `{"success": true}`)
 }

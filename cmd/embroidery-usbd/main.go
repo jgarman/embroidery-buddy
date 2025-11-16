@@ -125,6 +125,7 @@ func main() {
 	r.HandleFunc("/", webHandler.IndexHandler).Methods("GET")
 	r.HandleFunc("/api/upload", webHandler.UploadHandler).Methods("POST")
 	r.HandleFunc("/api/health", webHandler.HealthHandler).Methods("GET")
+	r.HandleFunc("/api/clear", webHandler.ClearFilesHandler).Methods("POST")
 
 	handler := c.Handler(r)
 

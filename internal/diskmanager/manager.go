@@ -241,6 +241,56 @@ func (m *Manager) ReadFile(filePath string) (io.ReadCloser, error) {
 	return file, nil
 }
 
+// ClearFiles clears all files from the disk by recreating the filesystem
+func (m *Manager) ClearFiles() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.filesystem == nil {
+		return ErrDiskNotInitialized
+	}
+
+	// Disconnect the USB gadget before clearing
+	if err := m.gadget.Disconnect(); err != nil {
+		return fmt.Errorf("failed to disconnect USB gadget: %w", err)
+	}
+
+	// Ensure we reconnect even if there's an error
+	defer func() {
+		if err := m.gadget.Reconnect(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to reconnect USB gadget: %v\n", err)
+		}
+	}()
+
+	// Get the disk size by checking the file before we remove it
+	fileInfo, err := os.Stat(m.config.DiskPath)
+	if err != nil {
+		return fmt.Errorf("failed to stat disk image: %w", err)
+	}
+	diskSizeMb := fileInfo.Size() / (1024 * 1024)
+
+	// Close the current disk references
+	m.disk = nil
+	m.filesystem = nil
+
+	// Remove the existing disk image file
+	if err := os.Remove(m.config.DiskPath); err != nil {
+		return fmt.Errorf("failed to remove existing disk image: %w", err)
+	}
+
+	// Recreate the disk image and filesystem
+	if err := CreateDiskImage(m.config.DiskPath, diskSizeMb); err != nil {
+		return fmt.Errorf("failed to recreate filesystem: %w", err)
+	}
+
+	// Reopen the disk
+	if err := m.openDisk(); err != nil {
+		return fmt.Errorf("failed to reopen disk: %w", err)
+	}
+
+	return nil
+}
+
 // Close cleans up resources held by the Manager
 // It implements the io.Closer interface
 func (m *Manager) Close() error {

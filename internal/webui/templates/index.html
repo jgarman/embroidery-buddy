@@ -208,9 +208,211 @@
             background: #ffebee;
             color: #c62828;
         }
+
+        /* Hamburger Menu Styles */
+        .hamburger {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 30px;
+            height: 25px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .hamburger span {
+            display: block;
+            width: 100%;
+            height: 3px;
+            background: #667eea;
+            margin-bottom: 5px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+
+        .menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100vh;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 80px 30px 30px;
+        }
+
+        .menu.active {
+            right: 0;
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+
+        .menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .menu-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .menu-item:hover {
+            color: #667eea;
+            padding-left: 10px;
+        }
+
+        .menu-item-icon {
+            font-size: 20px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-text {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #d0d0d0;
+        }
+
+        .modal-btn-confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .modal-btn-confirm.danger {
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+        }
+
+        .modal-btn-confirm.danger:hover {
+            box-shadow: 0 5px 20px rgba(244, 67, 54, 0.4);
+        }
     </style>
 </head>
 <body>
+    <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <div class="menu" id="menu">
+        <div class="menu-item" id="menuStatus">
+            <span class="menu-item-icon">📊</span>
+            <span>Status</span>
+        </div>
+        <div class="menu-item" id="menuClearFiles">
+            <span class="menu-item-icon">🗑️</span>
+            <span>Clear Files</span>
+        </div>
+        <div class="menu-item" id="menuAbout">
+            <span class="menu-item-icon">ℹ️</span>
+            <span>About</span>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-text" id="modalText"></div>
+            <div class="modal-buttons" id="modalButtons"></div>
+        </div>
+    </div>
+
     <div class="container">
         <h1>📁 Embroidery File Upload</h1>
         <p class="subtitle">Upload your embroidery files to the device</p>
@@ -372,6 +574,126 @@
 
             xhr.open('POST', '/api/upload', true);
             xhr.send(formData);
+        }
+
+        // Hamburger menu functionality
+        const hamburger = document.getElementById('hamburger');
+        const menu = document.getElementById('menu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const menuStatus = document.getElementById('menuStatus');
+        const menuClearFiles = document.getElementById('menuClearFiles');
+        const menuAbout = document.getElementById('menuAbout');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalText = document.getElementById('modalText');
+        const modalButtons = document.getElementById('modalButtons');
+
+        function toggleMenu() {
+            hamburger.classList.toggle('active');
+            menu.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+        }
+
+        function closeMenu() {
+            hamburger.classList.remove('active');
+            menu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+        }
+
+        function showModal(title, text, buttons) {
+            modalTitle.textContent = title;
+            modalText.textContent = text;
+            modalButtons.innerHTML = '';
+
+            buttons.forEach(btn => {
+                const button = document.createElement('button');
+                button.className = 'modal-btn ' + btn.class;
+                button.textContent = btn.text;
+                button.onclick = btn.onclick;
+                modalButtons.appendChild(button);
+            });
+
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        hamburger.addEventListener('click', toggleMenu);
+        menuOverlay.addEventListener('click', closeMenu);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Menu item handlers
+        menuStatus.addEventListener('click', () => {
+            closeMenu();
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    showModal('📊 System Status', 'Status: ' + data.status.toUpperCase(), [
+                        { text: 'OK', class: 'modal-btn-confirm', onclick: closeModal }
+                    ]);
+                })
+                .catch(error => {
+                    showModal('📊 System Status', 'Failed to fetch status: ' + error.message, [
+                        { text: 'OK', class: 'modal-btn-confirm', onclick: closeModal }
+                    ]);
+                });
+        });
+
+        menuClearFiles.addEventListener('click', () => {
+            closeMenu();
+            showModal(
+                '🗑️ Clear All Files',
+                'Are you sure you want to clear all files from the disk? This will erase everything and cannot be undone.',
+                [
+                    { text: 'Cancel', class: 'modal-btn-cancel', onclick: closeModal },
+                    {
+                        text: 'Clear Files',
+                        class: 'modal-btn-confirm danger',
+                        onclick: () => {
+                            clearAllFiles();
+                        }
+                    }
+                ]
+            );
+        });
+
+        menuAbout.addEventListener('click', () => {
+            closeMenu();
+            showModal(
+                'ℹ️ About',
+                'Embroidery File Upload System\n\nVersion 1.0\n\nA simple web interface for uploading embroidery files to your device.',
+                [
+                    { text: 'OK', class: 'modal-btn-confirm', onclick: closeModal }
+                ]
+            );
+        });
+
+        function clearAllFiles() {
+            fetch('/api/clear', { method: 'POST' })
+                .then(response => {
+                    if (response.ok) {
+                        closeModal();
+                        showMessage('✓ All files cleared successfully!', 'success');
+                    } else {
+                        return response.text().then(text => {
+                            throw new Error(text || 'Failed to clear files');
+                        });
+                    }
+                })
+                .catch(error => {
+                    closeModal();
+                    setTimeout(() => {
+                        showModal('Error', 'Failed to clear files: ' + error.message, [
+                            { text: 'OK', class: 'modal-btn-confirm', onclick: closeModal }
+                        ]);
+                    }, 300);
+                });
         }
     </script>
 </body>
