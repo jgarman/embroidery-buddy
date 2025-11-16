@@ -1,10 +1,14 @@
+//go:build linux
+
 package diskmanager
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/jgarman/embroidery-buddy/internal/system"
 )
 
 // LinuxUsbGadget implements UsbGadget for Linux systems using configfs
@@ -23,7 +27,7 @@ func NewLinuxUsbGadget(config Config) *LinuxUsbGadget {
 
 // writeSysfs writes a value to a sysfs file
 func writeSysfs(path, value string) error {
-	err := os.WriteFile(path, []byte(value), 0664)
+	err := os.WriteFile(path, []byte(value), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write '%s' to %s: %w", value, path, err)
 	}
@@ -45,7 +49,7 @@ func (g *LinuxUsbGadget) Initialize() error {
 	}
 
 	// Create USB gadget directory
-	if err := os.MkdirAll(gadgetBase, desiredPermissions); err != nil {
+	if err := os.Mkdir(gadgetBase, desiredPermissions); err != nil {
 		return fmt.Errorf("could not create USB gadget directory: %w", err)
 	}
 
@@ -69,8 +73,9 @@ func (g *LinuxUsbGadget) Initialize() error {
 		return fmt.Errorf("failed to create strings directory: %w", err)
 	}
 
-	// TODO: Generate or retrieve actual serial number instead of hardcoded value
-	if err := writeSysfs(filepath.Join(stringsDir, "serialnumber"), "b827ebcc658d"); err != nil {
+	// Get WiFi MAC address for serial number
+	serialNumber := getSerialNumber()
+	if err := writeSysfs(filepath.Join(stringsDir, "serialnumber"), serialNumber); err != nil {
 		return err
 	}
 	if err := writeSysfs(filepath.Join(stringsDir, "manufacturer"), g.config.GadgetManufacturer); err != nil {
@@ -122,21 +127,18 @@ func (g *LinuxUsbGadget) Initialize() error {
 		return fmt.Errorf("failed to link function to config: %w", err)
 	}
 
-	// Get UDC name for activation
-	udcList, err := os.ReadFile("/sys/class/udc")
+	// Get UDC name for activation by reading directory entries
+	udcEntries, err := os.ReadDir("/sys/class/udc")
 	if err != nil {
-		return fmt.Errorf("failed to read UDC list: %w", err)
+		return fmt.Errorf("failed to read UDC directory: %w", err)
 	}
 
-	udcName := strings.TrimSpace(string(udcList))
-	if udcName == "" {
+	if len(udcEntries) == 0 {
 		return fmt.Errorf("no UDC available")
 	}
 
-	// Get first UDC if multiple are available
-	if idx := strings.Index(udcName, "\n"); idx != -1 {
-		udcName = udcName[:idx]
-	}
+	// Use the first UDC found
+	udcName := udcEntries[0].Name()
 
 	// Store UDC name for later use
 	g.udcName = udcName
@@ -155,7 +157,7 @@ func (g *LinuxUsbGadget) Disconnect() error {
 	udcPath := filepath.Join(gadgetBase, "UDC")
 
 	// Disconnect by writing empty string to UDC
-	if err := writeSysfs(udcPath, ""); err != nil {
+	if err := writeSysfs(udcPath, "\n"); err != nil {
 		return fmt.Errorf("failed to disconnect gadget: %w", err)
 	}
 
@@ -216,4 +218,19 @@ func (g *LinuxUsbGadget) destroy() {
 
 	// Finally remove the gadget directory itself
 	_ = os.RemoveAll(gadgetBase)
+}
+
+// getSerialNumber returns a serial number based on the WiFi MAC address
+// Falls back to a default if MAC cannot be determined
+func getSerialNumber() string {
+	// Try to get WiFi MAC address
+	_, mac, err := system.FindWiFiInterface()
+	if err != nil {
+		log.Printf("Warning: Could not get WiFi MAC address: %v, using default serial number", err)
+		return "000000000000"
+	}
+
+	// Format as USB serial (12 hex characters, no separators)
+	serialNumber := system.FormatMAC(mac, system.MACFormatUSBSerial)
+	return serialNumber
 }

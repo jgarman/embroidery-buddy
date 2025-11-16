@@ -19,6 +19,9 @@ build-rpi:
 
 build-all: build build-rpi
 
+copy: build-rpi
+	rsync build/bin/${BINARY_NAME}-linux-arm dietpi@dietpi.local:.
+
 clean:
 	go clean
 	rm -rf ${BUILD_DIR}

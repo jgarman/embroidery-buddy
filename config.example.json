@@ -1,0 +1,42 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": 15,
+    "write_timeout": 15,
+    "idle_timeout": 60,
+    "cors": {
+      "allowed_origins": ["*"],
+      "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allowed_headers": ["*"],
+      "allow_credentials": true
+    }
+  },
+  "disk": {
+    "path": "/var/lib/embroidery-buddy/disk.img",
+    "size_mb": 100,
+    "auto_create": true
+  },
+  "usb_gadget": {
+    "short_name": "embroidery",
+    "vendor_id": "0x1d6b",
+    "product_id": "0x0104",
+    "bcd_device": "0x0100",
+    "bcd_usb": "0x0200",
+    "product_name": "Embroidery USB Storage",
+    "manufacturer": "Embroidery Buddy",
+    "use_noop": false
+  },
+  "upload": {
+    "max_size_mb": 100
+  },
+  "mdns": {
+    "enabled": true,
+    "service_name": "Embroidery Buddy",
+    "use_dbus": true,
+    "txt_records": [
+      "path=/",
+      "version=1.0"
+    ]
+  }
+}
