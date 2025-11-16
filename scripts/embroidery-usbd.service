@@ -1,0 +1,58 @@
+[Unit]
+Description=Embroidery Buddy USB Gadget Server
+Documentation=https://github.com/jgarman/embroidery-buddy
+After=network.target network-online.target avahi-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Path to the embroidery-usbd binary
+ExecStart=/usr/local/bin/embroidery-usbd -config /etc/embroidery-usbd/config.json
+
+# Working directory
+WorkingDirectory=/var/lib/embroidery-usbd
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+
+# Resource limits
+# Limit memory usage (adjust as needed)
+MemoryMax=256M
+# CPU weight (default is 100)
+CPUWeight=100
+
+# Security hardening
+# Run with minimal privileges where possible
+NoNewPrivileges=true
+# Protect system directories
+ProtectSystem=strict
+ProtectHome=true
+# Allow writing to specific directories
+ReadWritePaths=/var/lib/embroidery-usbd /sys/kernel/config /dev
+# Protect kernel tunables
+ProtectKernelTunables=true
+ProtectKernelModules=false
+ProtectControlGroups=true
+# Network settings
+PrivateNetwork=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=embroidery-usbd
+
+# Graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+
+# Environment variables (optional)
+Environment="GOMAXPROCS=2"
+
+[Install]
+WantedBy=multi-user.target
