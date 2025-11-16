@@ -10,7 +10,7 @@ User=root
 Group=root
 
 # Path to the embroidery-usbd binary
-ExecStart=/usr/local/bin/embroidery-usbd -config /etc/embroidery-usbd/config.json
+ExecStart=/opt/embroiderybuddy/bin/embroidery-usbd-linux-arm -config /opt/embroiderybuddy/etc/embroidery-usbd/config.json
 
 # Working directory
 WorkingDirectory=/var/lib/embroidery-usbd
@@ -32,7 +32,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 # Allow writing to specific directories
-ReadWritePaths=/var/lib/embroidery-usbd /sys/kernel/config /dev
+ReadWritePaths=/var/lib/embroidery-usbd /sys/kernel/config /dev /tmp
 # Protect kernel tunables
 ProtectKernelTunables=true
 ProtectKernelModules=false

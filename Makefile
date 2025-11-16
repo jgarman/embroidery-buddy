@@ -31,7 +31,7 @@ build-benchmark-rpi:
 		go build ${GO_FLAGS} -o ${BUILD_DIR}/${BENCHMARK_NAME}-linux-arm cmd/benchmark-copy/main.go
 
 copy: build-rpi
-	rsync build/bin/linux-arm/* dietpi@dietpi.local:bin/
+	rsync build/bin/linux-arm/* dietpi@dietpi.local:/opt/embroiderybuddy/bin/
 
 clean:
 	go clean
