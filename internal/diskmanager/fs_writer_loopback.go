@@ -1,0 +1,98 @@
+package diskmanager
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+)
+
+// LoopbackFilesystemWriter uses loopback mounting for fast filesystem writes
+type LoopbackFilesystemWriter struct {
+	diskPath string
+	mountDir string
+}
+
+// NewLoopbackFilesystemWriter creates a new loopback-based filesystem writer
+func NewLoopbackFilesystemWriter(diskPath string) *LoopbackFilesystemWriter {
+	return &LoopbackFilesystemWriter{
+		diskPath: diskPath,
+	}
+}
+
+// Begin mounts the disk image to a temporary directory using loopback mount
+func (w *LoopbackFilesystemWriter) Begin() error {
+	// Create temporary mount directory
+	mountDir, err := os.MkdirTemp("", "bernina-mount-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp mount directory: %w", err)
+	}
+
+	// Mount the disk image loopback
+	// offset=1048576 skips the partition table (1MB = 2048 sectors * 512 bytes)
+	cmd := exec.Command("mount", "-o", "loop", w.diskPath, mountDir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		os.RemoveAll(mountDir)
+		return fmt.Errorf("failed to mount loopback: %w (output: %s)", err, string(output))
+	}
+
+	w.mountDir = mountDir
+	return nil
+}
+
+// WriteFile writes a file to the mounted filesystem using standard OS operations
+func (w *LoopbackFilesystemWriter) WriteFile(filePath string, reader io.Reader, size int64) error {
+	if w.mountDir == "" {
+		return fmt.Errorf("filesystem not mounted")
+	}
+
+	// Normalize path
+	filePath = normalizePath(filePath)
+
+	// Convert to absolute path on mounted filesystem
+	absPath := filepath.Join(w.mountDir, filePath)
+
+	// Ensure parent directory exists
+	dir := filepath.Dir(absPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Create file
+	file, err := os.OpenFile(absPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	// Copy data - use io.Copy instead of io.CopyN to handle all data
+	// The size parameter is provided for information but we'll copy everything
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+// End unmounts the loopback mount and removes the temporary directory
+func (w *LoopbackFilesystemWriter) End() error {
+	if w.mountDir == "" {
+		return nil // Already unmounted or never mounted
+	}
+
+	// Unmount
+	cmd := exec.Command("umount", w.mountDir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to unmount: %w (output: %s)", err, string(output))
+	}
+
+	// Remove temporary directory
+	if err := os.RemoveAll(w.mountDir); err != nil {
+		return fmt.Errorf("failed to remove temp directory: %w", err)
+	}
+
+	w.mountDir = ""
+	return nil
+}

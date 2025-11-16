@@ -42,10 +42,11 @@ func (g *LinuxUsbGadget) Initialize() error {
 	// Check if USB gadget directory already exists
 	_, err := os.Stat(gadgetBase)
 	if err == nil {
-		return fmt.Errorf("gadget %s already configured", g.config.GadgetShortName)
-	}
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("other error for gadget %s: %w", g.config.GadgetShortName, err)
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("other error for gadget %s: %w", g.config.GadgetShortName, err)
+		}
+		log.Printf("gadget %s already configured, trying to destroy", g.config.GadgetShortName)
+		g.destroy()
 	}
 
 	// Create USB gadget directory

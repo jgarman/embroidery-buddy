@@ -151,70 +151,22 @@ func normalizePath(p string) string {
 	return p
 }
 
-func (m *Manager) ensureDir(dirPath string) error {
-	parts := strings.Split(dirPath, "/")
-	currentPath := "/"
-
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
-
-		currentPath = path.Join(currentPath, part)
-
-		// Try to create directory - if it already exists, Mkdir will return an error
-		// which we can safely ignore
-		if err := m.filesystem.Mkdir(currentPath); err != nil && !os.IsExist(err) {
-			return fmt.Errorf("failed to create directory %s: %w", currentPath, err)
-		}
-	}
-
-	return nil
-}
-
 // Transaction represents a batch of write operations that are performed
 // with the USB gadget disconnected to prevent host access during modifications.
 type Transaction struct {
-	manager *Manager
+	writer FilesystemWriter
 }
 
 // WriteFile writes a file to the disk within the transaction.
 // The file path is normalized and parent directories are created automatically.
 func (t *Transaction) WriteFile(filePath string, reader io.Reader, size int64) error {
-	if t.manager.filesystem == nil {
-		return ErrDiskNotInitialized
-	}
-
-	// Normalize path
-	filePath = normalizePath(filePath)
-
-	// Ensure parent directory exists
-	dir := path.Dir(filePath)
-	if dir != "/" && dir != "." {
-		if err := t.manager.ensureDir(dir); err != nil {
-			return fmt.Errorf("failed to ensure directory: %w", err)
-		}
-	}
-
-	// Create file
-	file, err := t.manager.filesystem.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	// Copy data
-	_, err = io.CopyN(file, reader, size)
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
+	return t.writer.WriteFile(filePath, reader, size)
 }
 
 // BeginTransaction starts a new transaction for batch write operations.
-// The USB gadget is disconnected before the transaction function runs and
-// reconnected after it completes (or panics).
+// The USB gadget is disconnected, the filesystem writer is initialized,
+// and the transaction function runs. After completion (or panic), the writer
+// is finalized and the USB gadget is reconnected.
 //
 // Example usage:
 //
@@ -240,15 +192,27 @@ func (m *Manager) BeginTransaction(fn func(*Transaction) error) error {
 		return fmt.Errorf("failed to disconnect USB gadget: %w", err)
 	}
 
-	// Ensure we reconnect even if there's an error or panic
+	// Create the filesystem writer
+	writer := NewFilesystemWriter(m.config.DiskPath, m.filesystem)
+
+	// Initialize the writer (mount filesystem if using loopback)
+	if err := writer.Begin(); err != nil {
+		_ = m.gadget.Reconnect()
+		return fmt.Errorf("failed to initialize filesystem writer: %w", err)
+	}
+
+	// Ensure we finalize the writer and reconnect even if there's an error or panic
 	defer func() {
+		if err := writer.End(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to finalize filesystem writer: %v\n", err)
+		}
 		if err := m.gadget.Reconnect(); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: failed to reconnect USB gadget: %v\n", err)
 		}
 	}()
 
 	// Create transaction and execute user function
-	tx := &Transaction{manager: m}
+	tx := &Transaction{writer: writer}
 	return fn(tx)
 }
 
