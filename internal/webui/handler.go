@@ -11,6 +11,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -286,7 +287,20 @@ func (h *Handler) extractZipStream(reader io.Reader, maxSize int64) (int, int64,
 func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, `{"status": "ok"}`)
+
+	temperature := "0°C"
+
+	// Get operating temperature
+	data, err := os.ReadFile("/sys/class/thermal/thermal_zone0/temp")
+	if err == nil {
+		var temp int
+		tempMilliC := strings.TrimSpace(string(data))
+		if _, err := fmt.Sscanf(tempMilliC, "%d", &temp); err == nil {
+			temperature = fmt.Sprintf("%.1f°C", float64(temp)/1000.0)
+		}
+	}
+
+	io.WriteString(w, fmt.Sprintf(`{"status": "ok", "temperature": "%s"}`, temperature))
 }
 
 // ClearFilesHandler clears all files from the disk by recreating the filesystem

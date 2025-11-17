@@ -176,7 +176,13 @@ func (g *LinuxUsbGadget) Reconnect() error {
 		return fmt.Errorf("no UDC name available, gadget may not have been initialized")
 	}
 
+	// having some issues with stale data after disconnect/reconnect
 	gadgetBase := filepath.Join("/sys/kernel/config/usb_gadget", g.config.GadgetShortName)
+	massStorageDir := filepath.Join(gadgetBase, "functions/mass_storage.usb0")
+	if err := writeSysfs(filepath.Join(massStorageDir, "lun.0/file"), g.config.DiskPath); err != nil {
+		return err
+	}
+
 	udcPath := filepath.Join(gadgetBase, "UDC")
 
 	// Reconnect by writing UDC name back

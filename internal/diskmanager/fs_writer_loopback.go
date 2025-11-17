@@ -31,7 +31,6 @@ func (w *LoopbackFilesystemWriter) Begin() error {
 	}
 
 	// Mount the disk image loopback
-	// offset=1048576 skips the partition table (1MB = 2048 sectors * 512 bytes)
 	cmd := exec.Command("mount", "-o", "loop", w.diskPath, mountDir)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		os.RemoveAll(mountDir)
