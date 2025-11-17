@@ -39,7 +39,6 @@ ProtectKernelModules=false
 ProtectControlGroups=true
 # Network settings
 PrivateNetwork=false
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 # Logging
 StandardOutput=journal

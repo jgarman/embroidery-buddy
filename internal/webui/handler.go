@@ -1,13 +1,18 @@
 package webui
 
 import (
+	"archive/zip"
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/jgarman/embroidery-buddy/internal/diskmanager"
 )
@@ -48,7 +53,15 @@ func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 200*1024*1024)
 
 	// Get the multipart reader for streaming
-	reader, err := r.MultipartReader()
+	// Process each part in the multipart form
+	var filename string
+	var fileSize int64
+	var filesExtracted int
+	var err error
+	var part *multipart.Part
+	var reader *multipart.Reader
+
+	reader, err = r.MultipartReader()
 	if err != nil {
 		log.Printf("Error creating multipart reader: %v", err)
 		http.Error(w, "Invalid multipart request", http.StatusBadRequest)
@@ -57,12 +70,8 @@ func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("In multipart reader")
 
-	// Process each part in the multipart form
-	var filename string
-	var fileSize int64
-
 	for {
-		part, err := reader.NextPart()
+		part, err = reader.NextPart()
 		if err == io.EOF {
 			break
 		}
@@ -94,24 +103,81 @@ func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Uploading file: %s", filename)
 
-		// Write the file using a transaction with streaming
-		// Use a large buffer (1MB) for better performance
-		var byteCounter int64
-		bufferedReader := bufio.NewReaderSize(part, 1024*1024)
-		countingReader := &countingReader{reader: bufferedReader, count: &byteCounter}
+		// Check if this is a zip file
 
-		err = h.diskManager.BeginTransaction(func(tx *diskmanager.Transaction) error {
-			// Pass a large size since we're streaming - the actual size will be determined by EOF
-			return tx.WriteFile(filePath, countingReader, 100*1024*1024)
-		})
+		if isZipFile(filename) {
+			log.Printf("Detected zip file, extracting contents...")
 
-		fileSize = byteCounter
-		part.Close()
+			// Use a large buffer (1MB) for better performance
+			bufferedReader := bufio.NewReaderSize(part, 1024*1024)
 
-		if err != nil {
-			log.Printf("Error writing file to disk: %v", err)
-			http.Error(w, fmt.Sprintf("Failed to save file: %v", err), http.StatusInternalServerError)
-			return
+			// Extract zip contents
+			filesExtracted, fileSize, err = h.extractZipStream(bufferedReader, 200*1024*1024)
+			part.Close()
+
+			if err != nil {
+				log.Printf("Error extracting zip file: %v", err)
+
+				// Check for specific error types and provide user-friendly messages
+				var statusCode int
+				var errorMessage string
+
+				if errors.Is(err, diskmanager.ErrDiskFull) {
+					statusCode = http.StatusInsufficientStorage
+					errorMessage = "Disk is full. Please clear some files and try again."
+				} else if errors.Is(err, diskmanager.ErrDiskNotInitialized) {
+					statusCode = http.StatusInternalServerError
+					errorMessage = "Disk not initialized. Please contact support."
+				} else {
+					statusCode = http.StatusInternalServerError
+					errorMessage = fmt.Sprintf("Failed to extract zip file: %v", err)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(statusCode)
+				fmt.Fprintf(w, `{"success": false, "error": "%s"}`, errorMessage)
+				return
+			}
+
+			log.Printf("Successfully extracted %d files from %s", filesExtracted, filename)
+		} else {
+			// Write the file using a transaction with streaming
+			// Use a large buffer (1MB) for better performance
+			var byteCounter int64
+			bufferedReader := bufio.NewReaderSize(part, 1024*1024)
+			countingReader := &countingReader{reader: bufferedReader, count: &byteCounter}
+
+			err = h.diskManager.BeginTransaction(func(tx *diskmanager.Transaction) error {
+				// Pass a large size since we're streaming - the actual size will be determined by EOF
+				return tx.WriteFile(filePath, countingReader, 100*1024*1024)
+			})
+
+			fileSize = byteCounter
+			part.Close()
+
+			if err != nil {
+				log.Printf("Error writing file to disk: %v", err)
+
+				// Check for specific error types and provide user-friendly messages
+				var statusCode int
+				var errorMessage string
+
+				if errors.Is(err, diskmanager.ErrDiskFull) {
+					statusCode = http.StatusInsufficientStorage
+					errorMessage = "Disk is full. Please clear some files and try again."
+				} else if errors.Is(err, diskmanager.ErrDiskNotInitialized) {
+					statusCode = http.StatusInternalServerError
+					errorMessage = "Disk not initialized. Please contact support."
+				} else {
+					statusCode = http.StatusInternalServerError
+					errorMessage = fmt.Sprintf("Failed to save file: %v", err)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(statusCode)
+				fmt.Fprintf(w, `{"success": false, "error": "%s"}`, errorMessage)
+				return
+			}
 		}
 
 		// Break after processing the first file
@@ -126,9 +192,13 @@ func (h *Handler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d}`, filename, fileSize)
-
-	log.Printf("Successfully uploaded: %s (%d bytes)", filename, fileSize)
+	if filesExtracted > 0 {
+		fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d, "filesExtracted": %d}`, filename, fileSize, filesExtracted)
+		log.Printf("Successfully extracted %d files from %s (%d bytes total)", filesExtracted, filename, fileSize)
+	} else {
+		fmt.Fprintf(w, `{"success": true, "filename": "%s", "size": %d}`, filename, fileSize)
+		log.Printf("Successfully uploaded: %s (%d bytes)", filename, fileSize)
+	}
 }
 
 // countingReader wraps an io.Reader and counts bytes read
@@ -141,6 +211,75 @@ func (cr *countingReader) Read(p []byte) (int, error) {
 	n, err := cr.reader.Read(p)
 	*cr.count += int64(n)
 	return n, err
+}
+
+// isZipFile checks if a filename has a .zip extension
+func isZipFile(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".zip")
+}
+
+// extractZipStream extracts a zip file from a reader and writes all files to the disk
+// Returns the number of files extracted and any error
+func (h *Handler) extractZipStream(reader io.Reader, maxSize int64) (int, int64, error) {
+	// Since zip files need random access to read the central directory,
+	// we need to buffer the entire file in memory
+	// For very large files, this could be memory-intensive
+	buf := &bytes.Buffer{}
+	written, err := io.CopyN(buf, reader, maxSize)
+	if err != nil && err != io.EOF {
+		return 0, written, fmt.Errorf("failed to buffer zip file: %w", err)
+	}
+
+	// Create a zip reader from the buffered data
+	zipReader, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		return 0, written, fmt.Errorf("failed to open zip file: %w", err)
+	}
+
+	filesExtracted := 0
+	totalSize := int64(0)
+
+	// Extract all files in a single transaction
+	err = h.diskManager.BeginTransaction(func(tx *diskmanager.Transaction) error {
+		for _, zipFile := range zipReader.File {
+			// Skip directories
+			if zipFile.FileInfo().IsDir() {
+				continue
+			}
+
+			// Sanitize the file path to prevent directory traversal
+			cleanPath := filepath.Clean("/" + zipFile.Name)
+			if strings.Contains(cleanPath, "..") {
+				log.Printf("Skipping potentially malicious path in zip: %s", zipFile.Name)
+				continue
+			}
+
+			// Open the file in the zip
+			rc, err := zipFile.Open()
+			if err != nil {
+				return fmt.Errorf("failed to open file %s in zip: %w", zipFile.Name, err)
+			}
+
+			// Write the file to disk
+			if err := tx.WriteFile(cleanPath, rc, int64(zipFile.UncompressedSize64)); err != nil {
+				rc.Close()
+				return fmt.Errorf("failed to write file %s: %w", zipFile.Name, err)
+			}
+
+			rc.Close()
+			filesExtracted++
+			totalSize += int64(zipFile.UncompressedSize64)
+			log.Printf("Extracted: %s (%d bytes)", zipFile.Name, zipFile.UncompressedSize64)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return filesExtracted, totalSize, err
+	}
+
+	return filesExtracted, totalSize, nil
 }
 
 // HealthHandler provides a health check endpoint

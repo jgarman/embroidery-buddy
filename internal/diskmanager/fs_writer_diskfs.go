@@ -44,6 +44,10 @@ func (w *DiskfsFilesystemWriter) ensureDir(dirPath string) error {
 		// Try to create directory - if it already exists, Mkdir will return an error
 		// which we can safely ignore
 		if err := w.filesystem.Mkdir(currentPath); err != nil && !os.IsExist(err) {
+			// Check if this is a disk full error
+			if isOutOfSpaceError(err) {
+				return ErrDiskFull
+			}
 			return fmt.Errorf("failed to create directory %s: %w", currentPath, err)
 		}
 	}
@@ -80,13 +84,17 @@ func (w *DiskfsFilesystemWriter) WriteFile(filePath string, reader io.Reader, si
 	dir := path.Dir(filePath)
 	if dir != "/" && dir != "." {
 		if err := w.ensureDir(dir); err != nil {
-			return fmt.Errorf("failed to ensure directory: %w", err)
+			return err // Already formatted with proper error type
 		}
 	}
 
 	// Create file
 	file, err := w.filesystem.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC)
 	if err != nil {
+		// Check if this is a disk full error
+		if isOutOfSpaceError(err) {
+			return ErrDiskFull
+		}
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
@@ -94,6 +102,10 @@ func (w *DiskfsFilesystemWriter) WriteFile(filePath string, reader io.Reader, si
 	// Copy data
 	_, err = io.CopyN(file, reader, size)
 	if err != nil && err != io.EOF {
+		// Check if this is a disk full error
+		if isOutOfSpaceError(err) {
+			return ErrDiskFull
+		}
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

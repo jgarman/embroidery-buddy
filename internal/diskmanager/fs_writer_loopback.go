@@ -57,12 +57,20 @@ func (w *LoopbackFilesystemWriter) WriteFile(filePath string, reader io.Reader, 
 	// Ensure parent directory exists
 	dir := filepath.Dir(absPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
+		// Check if this is a disk full error
+		if isOutOfSpaceError(err) {
+			return ErrDiskFull
+		}
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Create file
 	file, err := os.OpenFile(absPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
+		// Check if this is a disk full error
+		if isOutOfSpaceError(err) {
+			return ErrDiskFull
+		}
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
@@ -75,15 +83,32 @@ func (w *LoopbackFilesystemWriter) WriteFile(filePath string, reader io.Reader, 
 	// The size parameter is provided for information but we'll copy everything
 	_, err = io.Copy(bufferedWriter, reader)
 	if err != nil {
+		// Check if this is a disk full error
+		if isOutOfSpaceError(err) {
+			return ErrDiskFull
+		}
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	// Ensure all data is flushed to disk
 	if err := bufferedWriter.Flush(); err != nil {
+		// Check if this is a disk full error
+		if isOutOfSpaceError(err) {
+			return ErrDiskFull
+		}
 		return fmt.Errorf("failed to flush file: %w", err)
 	}
 
 	return nil
+}
+
+// isOutOfSpaceError checks if an error is a "no space left on device" error
+func isOutOfSpaceError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for ENOSPC errno
+	return err.Error() == "no space left on device"
 }
 
 // End unmounts the loopback mount and removes the temporary directory

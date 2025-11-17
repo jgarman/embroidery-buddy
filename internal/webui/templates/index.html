@@ -556,12 +556,35 @@
                 uploadBtn.disabled = false;
 
                 if (xhr.status === 200) {
-                    showMessage('✓ File uploaded successfully!', 'success');
+                    // Try to parse response to see if it was a zip extraction
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.filesExtracted && response.filesExtracted > 0) {
+                            showMessage('✓ Zip file extracted successfully! ' + response.filesExtracted + ' files extracted.', 'success');
+                        } else {
+                            showMessage('✓ File uploaded successfully!', 'success');
+                        }
+                    } catch (e) {
+                        showMessage('✓ File uploaded successfully!', 'success');
+                    }
                     setTimeout(() => {
                         clearFile();
                     }, 2000);
                 } else {
-                    showMessage('✗ Upload failed: ' + xhr.statusText, 'error');
+                    // Try to parse error message from JSON response
+                    let errorMsg = 'Upload failed';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMsg = response.error;
+                        } else {
+                            errorMsg = xhr.statusText || 'Upload failed';
+                        }
+                    } catch (e) {
+                        // If response is not JSON, use status text or response text
+                        errorMsg = xhr.responseText || xhr.statusText || 'Upload failed';
+                    }
+                    showMessage('✗ ' + errorMsg, 'error');
                     progressBar.classList.remove('show');
                 }
             });
